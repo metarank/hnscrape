@@ -15,7 +15,7 @@ case class HNAPI(client: Client[IO], endpoint: Uri) extends Logging {
   def item(id: Int): IO[ItemTimestamp] = for {
     start  <- IO(System.currentTimeMillis())
     result <- client.get(endpoint / "item" / s"$id.json")(_.as[Item])
-    _      <- info(s"get $id (${System.currentTimeMillis() - start}ms, title: ${result.title.getOrElse("")})")
+    // _      <- info(s"get $id (${System.currentTimeMillis() - start}ms, title: ${result.title.getOrElse("")})")
   } yield {
     ItemTimestamp(result, start)
   }
@@ -31,15 +31,33 @@ case class HNAPI(client: Client[IO], endpoint: Uri) extends Logging {
   def list(part: String): IO[ListingTimestamp] = for {
     start  <- IO(System.currentTimeMillis())
     result <- client.get(endpoint / s"$part.json")(_.as[List[Int]])
-    _      <- info(s"poll $part (${System.currentTimeMillis() - start}ms, ${result.size} items)")
+    // _      <- info(s"poll $part (${System.currentTimeMillis() - start}ms, ${result.size} items)")
   } yield {
     ListingTimestamp(result, start, part)
   }
 }
 
 object HNAPI extends Logging {
-  case class ItemTimestamp(item: Item, ts: Long)
-  case class ListingTimestamp(items: List[Int], ts: Long, name: String)
+  case class ItemTimestamp(item: Item, ts: Long) {
+    def asCSVLine: Array[String] = Array(
+      ts.toString,
+      item.id.toString,
+      item.by,
+      item.descendants.getOrElse(0).toString,
+      item.kids.getOrElse(Nil).mkString(","),
+      item.parts.getOrElse(Nil).mkString(","),
+      item.parent.map(_.toString).getOrElse(""),
+      item.score.getOrElse(0).toString,
+      item.time.toString,
+      item.title.getOrElse(""),
+      item.url.getOrElse(""),
+      item.text.getOrElse(""),
+      item.`type`
+    )
+  }
+  case class ListingTimestamp(items: List[Int], ts: Long, name: String) {
+    def asCSVLine: Array[String] = Array(ts.toString) ++ items.map(_.toString).toArray
+  }
 
   def create() = for {
     client   <- BlazeClientBuilder[IO].withConnectTimeout(1.second).withRequestTimeout(1.second).resource

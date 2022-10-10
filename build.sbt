@@ -10,17 +10,19 @@ lazy val root = (project in file("."))
   .settings(
     name := "hnscrape",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect"          % "3.3.14",
-      "org.scalatest" %% "scalatest"            % scalatestVersion % "test",
-      "ch.qos.logback" % "logback-classic"      % "1.4.0",
-      "io.circe"      %% "circe-core"           % circeVersion,
-      "io.circe"      %% "circe-generic"        % circeVersion,
-      "io.circe"      %% "circe-generic-extras" % circeVersion,
-      "io.circe"      %% "circe-parser"         % circeVersion,
-      "org.http4s"    %% "http4s-dsl"           % http4sVersion,
-      "org.http4s"    %% "http4s-blaze-server"  % http4sVersion,
-      "org.http4s"    %% "http4s-blaze-client"  % http4sVersion,
-      "org.http4s"    %% "http4s-circe"         % http4sVersion
+      "org.typelevel"        %% "cats-effect"          % "3.3.14",
+      "org.scalatest"        %% "scalatest"            % scalatestVersion % "test",
+      "ch.qos.logback"        % "logback-classic"      % "1.4.0",
+      "io.circe"             %% "circe-core"           % circeVersion,
+      "io.circe"             %% "circe-generic"        % circeVersion,
+      "io.circe"             %% "circe-generic-extras" % circeVersion,
+      "io.circe"             %% "circe-parser"         % circeVersion,
+      "org.http4s"           %% "http4s-dsl"           % http4sVersion,
+      "org.http4s"           %% "http4s-blaze-server"  % http4sVersion,
+      "org.http4s"           %% "http4s-blaze-client"  % http4sVersion,
+      "org.http4s"           %% "http4s-circe"         % http4sVersion,
+      "com.github.pathikrit" %% "better-files"         % "3.9.1",
+      "com.opencsv"           % "opencsv"              % "5.7.0"
     ),
     Compile / mainClass := Some("ai.metarank.hnscrape.Main"),
     ThisBuild / assemblyMergeStrategy := {

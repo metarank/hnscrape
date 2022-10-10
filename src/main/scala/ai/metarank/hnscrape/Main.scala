@@ -2,6 +2,7 @@ package ai.metarank.hnscrape
 
 import ai.metarank.hnscrape.HNAPI.{ItemTimestamp, ListingTimestamp}
 import cats.effect.{ExitCode, IO, IOApp}
+import com.opencsv.{CSVReaderBuilder, CSVWriterBuilder}
 import io.circe.syntax._
 
 import scala.concurrent.duration._
@@ -9,6 +10,11 @@ import fs2.Stream
 import fs2.io.file.{Files, Flags, Path}
 import io.circe.{Json, Printer}
 
+import java.io.FileWriter
+import java.text.SimpleDateFormat
+import java.time.{Instant, ZoneId, ZoneOffset}
+import java.time.format.DateTimeFormatter
+import java.util.Date
 import scala.util.Random
 
 object Main extends IOApp with Logging {
@@ -47,27 +53,23 @@ object Main extends IOApp with Logging {
     Random.shuffle(List.concat(news.items, top.items, show.items, best.items).distinct)
   }
 
-  def saveListing(list: ListingTimestamp, path: String): IO[Unit] = {
-    save(
-      Json.fromValues(list.items.map(i => Json.fromInt(i))),
-      dir = s"$path/${list.name}",
-      name = s"${list.ts}.json"
-    )
+  val format = DateTimeFormatter.ofPattern("yyyy_MM_dd").withZone(ZoneId.from(ZoneOffset.UTC))
+
+  def saveListing(list: ListingTimestamp, path: String): IO[Unit] = IO {
+    val ts     = Instant.ofEpochMilli(list.ts)
+    val writer = new FileWriter(s"$path/${format.format(ts)}_${list.name}.csv", true)
+    val csv    = new CSVWriterBuilder(writer).withSeparator(',').build()
+    csv.writeNext(list.asCSVLine)
+    csv.close()
+    writer.close()
   }
 
-  def saveItem(item: ItemTimestamp, path: String): IO[Unit] = {
-    save(item.item.asJson, s"$path/items/${item.item.id}", s"${item.ts}.json")
-  }
-
-  def save(json: Json, dir: String, name: String): IO[Unit] = {
-    for {
-      exists <- Files[IO].exists(Path(dir))
-      _      <- IO.whenA(!exists)(Files[IO].createDirectories(Path(dir)))
-      _ <- Stream
-        .emits(jsonFormat.print(json).getBytes())
-        .through(Files[IO].writeAll(Path(s"$dir/$name"), Flags.Write))
-        .compile
-        .drain
-    } yield {}
+  def saveItem(item: ItemTimestamp, path: String): IO[Unit] = IO {
+    val ts     = Instant.ofEpochMilli(item.ts)
+    val writer = new FileWriter(s"$path/${format.format(ts)}_items.csv", true)
+    val csv    = new CSVWriterBuilder(writer).withSeparator(',').build()
+    csv.writeNext(item.asCSVLine)
+    csv.close()
+    writer.close()
   }
 }
