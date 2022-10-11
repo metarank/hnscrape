@@ -19,7 +19,6 @@ import scala.util.Random
 
 object Main extends IOApp with Logging {
 
-  val jsonFormat = Printer.spaces2.copy(dropNullValues = true)
   override def run(args: List[String]): IO[ExitCode] = {
     HNAPI
       .create()

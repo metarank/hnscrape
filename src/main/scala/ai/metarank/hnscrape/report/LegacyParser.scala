@@ -1,15 +1,19 @@
-package ai.metarank.hnscrape
+package ai.metarank.hnscrape.report
 
+import ai.metarank.hnscrape.HNAPI.ItemTimestamp
+import ai.metarank.hnscrape.Item
 import better.files.File
-import com.opencsv.{CSVWriter, CSVWriterBuilder}
+import com.opencsv.CSVWriterBuilder
 import io.circe.Codec
-import io.circe.parser._
 import io.circe.generic.semiauto._
+import io.circe.parser._
 import io.circe.syntax._
+import scala.jdk.CollectionConverters._
 import java.io.FileWriter
+import scala.collection.parallel.CollectionConverters._
 
-object Parse {
-  case class StoryHistory(by: String, id: Long, time: Long, title: String, hist: List[History])
+object LegacyParser {
+  case class StoryHistory(by: String, id: Long, time: Long, tpe: String, title: String, hist: List[History])
   case class History(ts: Long, score: Int, comments: Int)
   implicit val histCodec: Codec[History]       = deriveCodec[History]
   implicit val storyCodec: Codec[StoryHistory] = deriveCodec[StoryHistory]
@@ -25,6 +29,7 @@ object Parse {
         id = item.id,
         time = item.time,
         title = title,
+        tpe = item.`type`,
         hist = List(History(ts = ts, score = score, comments = comments))
       )
     }
@@ -75,28 +80,25 @@ object Parse {
     items.createDirectoryIfNotExists()
     val targets = target.list.toList
     val cnt     = targets.size
+    val writer  = new FileWriter(s"$out/items.csv", true)
+    val csv     = new CSVWriterBuilder(writer).withSeparator(',').build()
+
+    var xcnt = 0
     for {
-      (item, index) <- targets.zipWithIndex
-    } yield {
+      item <- targets
+    } {
       val snapshots = item
         .list(_.extension(includeDot = false).contains("json"))
         .toList
-        .flatMap(f => decode[Item](f.contentAsString).toOption.map(i => i -> f.nameWithoutExtension.toLong))
-      snapshots match {
-        case head :: tail =>
-          StoryHistory(head._1, head._2) match {
-            case None =>
-            case Some(story) =>
-              val result = tail
-                .flatMap(x => History(x._1, x._2))
-                .foldLeft(story)((acc, hist) => acc.copy(hist = hist +: acc.hist))
-              val f        = result.copy(hist = result.hist.sortBy(_.ts))
-              val itemFile = File(items / item.nameWithoutExtension + ".json")
-              itemFile.writeText(f.asJson.spaces2)
-          }
-        case _ => //
-      }
-      if (index % 123 == 0) println(s"done $index/$cnt items")
+        .flatMap(f =>
+          decode[Item](f.contentAsString).toOption.map(i => ItemTimestamp(i, f.nameWithoutExtension.toLong).asCSVLine)
+        )
+        .asJava
+      csv.writeAll(snapshots)
+      xcnt += 1
+      if (xcnt % 123 == 0) println(s"done $xcnt/$cnt items")
     }
+    csv.close()
+    writer.close()
   }
 }
