@@ -10,19 +10,13 @@ import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset}
 case class Dataset(news: List[Top], best: List[Top], top: List[Top], show: List[Top], stories: Map[Long, Story])
 
 object Dataset {
-  case class Top(ts: Long, stories: Array[Long]) {
-    val dt = LocalDateTime.ofInstant(Instant.ofEpochMilli(ts), ZoneId.from(ZoneOffset.UTC))
-  }
+  case class Top(ts: LocalDateTime, stories: Array[Long]) {}
 
-  case class StoryHistory(by: String, id: Long, time: Long, tpe: String, title: String, hist: List[History])
+  case class StoryHistory(by: String, id: Long, time: LocalDateTime, tpe: String, title: String, hist: List[History])
   case class History(ts: Long, score: Int, comments: Int)
 
-  case class Story(id: Long, created: Long, title: String, by: String, snapshots: List[StorySnapshot]) {
-    val dt = LocalDateTime.ofInstant(Instant.ofEpochMilli(created), ZoneId.from(ZoneOffset.UTC))
-  }
-  case class StorySnapshot(ts: Long, score: Int) {
-    val dt = LocalDateTime.ofInstant(Instant.ofEpochMilli(ts), ZoneId.from(ZoneOffset.UTC))
-  }
+  case class Story(id: Long, created: LocalDateTime, title: String, by: String, snapshots: List[StorySnapshot]) {}
+  case class StorySnapshot(ts: LocalDateTime, score: Int)                                                       {}
 
   case class RawStory(id: Long, created: Long, title: String, by: String, snap: Long, score: Int)
 
@@ -30,13 +24,14 @@ object Dataset {
     val reader = new FileReader(file)
     val csv    = new CSVReaderBuilder(reader).build()
     val records = csv.iterator().asScala.map(_.toList).collect { case head :: tail =>
-      Top(head.toLong, tail.map(_.toLong).toArray)
+      Top(time(head.toLong), tail.map(_.toLong).toArray)
     }
     val result = records.toList
     println(s"loaded $file")
     result
   }
 
+  val start = LocalDateTime.of(2022, 9, 1, 0, 0)
   def loadStories(file: String): Map[Long, Story] = {
     val reader = new FileReader(file)
     val csv    = new CSVReaderBuilder(reader).build()
@@ -62,9 +57,11 @@ object Dataset {
         }
       )
       .toList
-    raw.groupMapReduce[Long, Story](_.id)(r =>
-      Story(r.id, r.created, r.title, r.by, List(StorySnapshot(r.snap, r.score)))
-    )((a, b) => a.copy(snapshots = a.snapshots ++ b.snapshots))
+    raw
+      .groupMapReduce[Long, Story](_.id)(r =>
+        Story(r.id, time(r.created), r.title, r.by, List(StorySnapshot(time(r.snap), r.score)))
+      )((a, b) => a.copy(snapshots = a.snapshots ++ b.snapshots))
+      .filter(_._2.created.isAfter(start))
   }
 
   def load(dir: String) = Dataset(
@@ -74,5 +71,9 @@ object Dataset {
     top = loadTop(s"$dir/topstories.csv"),
     stories = loadStories(s"$dir/items.csv")
   )
+
+  def time(millis: Long): LocalDateTime = {
+    LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.from(ZoneOffset.UTC))
+  }
 
 }

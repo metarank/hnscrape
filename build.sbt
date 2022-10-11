@@ -23,7 +23,8 @@ lazy val root = (project in file("."))
       "org.http4s"             %% "http4s-circe"               % http4sVersion,
       "com.github.pathikrit"   %% "better-files"               % "3.9.1",
       "com.opencsv"             % "opencsv"                    % "5.7.0",
-      "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4"
+      "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
+      "org.apache.commons"      % "commons-math3"              % "3.6.1"
     ),
     Compile / mainClass := Some("ai.metarank.hnscrape.Main"),
     ThisBuild / assemblyMergeStrategy := {
