@@ -62,6 +62,8 @@ object Dataset {
         Story(r.id, time(r.created), r.title, r.by, List(StorySnapshot(time(r.snap), r.score)))
       )((a, b) => a.copy(snapshots = a.snapshots ++ b.snapshots))
       .filter(_._2.created.isAfter(start))
+      .map(kv => kv._1 -> kv._2.copy(snapshots = kv._2.snapshots.sortBy(_.ts)))
+      .filter(_._1 != 32768834)
   }
 
   def load(dir: String) = Dataset(

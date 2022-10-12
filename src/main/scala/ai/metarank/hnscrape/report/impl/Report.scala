@@ -18,7 +18,7 @@ trait Report {
   def generate(ds: Dataset, path: String): Unit
 
   def main(args: Array[String]): Unit = {
-    val ds = Dataset.load("/home/shutty/work/metarank/hn/")
+    val ds = Dataset.load("/home/shutty/work/metarank/hnstat/index/")
     generate(ds, "/tmp/")
   }
 

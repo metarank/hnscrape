@@ -4,14 +4,21 @@ import com.opencsv.CSVWriterBuilder
 import org.apache.commons.math3.stat.descriptive.rank.Percentile
 
 import java.io.FileWriter
-import java.time.ZoneOffset
+import java.time.{LocalDateTime, ZoneOffset}
 
 object UpvotesDay extends Report {
   override def generate(ds: Dataset, path: String): Unit = {
-    val csv = new CSVWriterBuilder(new FileWriter(s"$path/upvotes_day.csv")).withSeparator(',').build()
+    build(ds, path, ts => weekend(ts), "weekend")
+    build(ds, path, ts => weekend(ts), "workday")
+    build(ds, path, ts => true, "week")
+  }
+
+  def build(ds: Dataset, path: String, filter: LocalDateTime => Boolean, name: String) = {
+    val csv = new CSVWriterBuilder(new FileWriter(s"$path/upvotes_$name.csv")).withSeparator(',').build()
 
     val upvotes = ds.stories.values
       .filter(_.snapshots.size > 1)
+      .filter(x => filter(x.created))
       .flatMap(s =>
         s.snapshots.sortBy(_.ts.toInstant(ZoneOffset.UTC).toEpochMilli).sliding(2).map { case a :: b :: Nil =>
           a.ts -> (b.score - a.score)
